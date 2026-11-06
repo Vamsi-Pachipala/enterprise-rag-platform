@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: enterprise-rag-platform
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: qwen2.5:3b
+          temperature: 0.3
+      embedding:
+        options:
+          model: nomic-embed-text
+
+    vectorstore:
+      qdrant:
+        host: localhost
+        port: 6334
+        collection-name: enterprise_documents
+        use-tls: false
+        initialize-schema: true
+
+server:
+  port: 8080
+

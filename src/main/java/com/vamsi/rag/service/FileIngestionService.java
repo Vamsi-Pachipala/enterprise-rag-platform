@@ -5,7 +5,6 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
 import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
-import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,23 +12,21 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
 public class FileIngestionService {
 
     private final VectorStore vectorStore;
+    private final StructureAwareChunker chunker;
 
-    private final TokenTextSplitter splitter =
-            TokenTextSplitter.builder()
-                    .withChunkSize(500)
-                    .withMinChunkSizeChars(200)
-                    .withMinChunkLengthToEmbed(20)
-                    .withMaxNumChunks(10000)
-                    .build();
+    public FileIngestionService(
+            VectorStore vectorStore,
+            StructureAwareChunker chunker) {
 
-    public FileIngestionService(VectorStore vectorStore) {
         this.vectorStore = vectorStore;
+        this.chunker = chunker;
     }
 
     public int ingest(MultipartFile file) throws IOException {
@@ -49,7 +46,7 @@ public class FileIngestionService {
         // 1. Extract documents
         List<Document> documents;
 
-        if (filename.toLowerCase().endsWith(".pdf")) {
+        if (filename.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
 
             PagePdfDocumentReader reader =
                     new PagePdfDocumentReader(
@@ -70,7 +67,8 @@ public class FileIngestionService {
         }
 
         // 2. Validate extracted content
-        if (documents.isEmpty() ||
+        if (documents == null ||
+                documents.isEmpty() ||
                 documents.stream().allMatch(document ->
                         document.getText() == null ||
                                 document.getText().isBlank())) {
@@ -79,8 +77,8 @@ public class FileIngestionService {
                     "No readable text found in uploaded file");
         }
 
-        // 3. Split documents into chunks
-        List<Document> chunks = splitter.apply(documents);
+        // 3. Structure-aware chunking
+        List<Document> chunks = chunker.chunk(documents);
 
         if (chunks.isEmpty()) {
             throw new IllegalArgumentException(
@@ -95,10 +93,13 @@ public class FileIngestionService {
                             new HashMap<>(chunk.getMetadata());
 
                     metadata.put("source", filename);
-                    metadata.put("fileType",
+
+                    metadata.put(
+                            "fileType",
                             file.getContentType() == null
                                     ? "unknown"
-                                    : file.getContentType());
+                                    : file.getContentType()
+                    );
 
                     return new Document(
                             chunk.getText(),

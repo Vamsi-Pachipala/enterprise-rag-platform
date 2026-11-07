@@ -16,6 +16,7 @@ spring:
         options:
           model: qwen2.5:3b
           temperature: 0.3
+          num-predict: 256
       embedding:
         options:
           model: nomic-embed-text

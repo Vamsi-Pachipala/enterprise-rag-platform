@@ -1,13 +1,13 @@
 package com.vamsi.rag.service;
 
+import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import org.springframework.ai.vectorstore.filter.Filter;
 
 @Service
 public class VectorStoreService {
@@ -32,7 +32,7 @@ public class VectorStoreService {
 
         SearchRequest searchRequest = SearchRequest.builder()
                 .query(query)
-                .topK(10)
+                .topK(3)
                 .build();
 
         return vectorStore.similaritySearch(searchRequest);
